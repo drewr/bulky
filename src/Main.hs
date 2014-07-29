@@ -11,11 +11,13 @@ import Data.Aeson.TH (deriveJSON, defaultOptions,
                       fieldLabelModifier, omitNothingFields)
 
 type Payload = BS.ByteString
+type ActionName = Text.Text
 
 data Action = IndexAction ActionMeta Payload
             | CreateAction ActionMeta Payload
             | UpdateAction ActionMeta Payload
             | DeleteAction ActionMeta
+            | InvalidAction String
             deriving (Show)
 
 data ActionMeta = ActionMeta { _index :: Maybe Text.Text
@@ -49,20 +51,30 @@ instance ToBulk Action where
   toBulk (DeleteAction meta) =
     encode $ ActionL "delete" meta
 
+decodeAction :: String -> Maybe (ActionName, ActionMeta)
+decodeAction x = 
+  case thing of
+    (Just actionM) -> let l = Map.toList actionM
+                      in if length l > 0
+                         then Just $ head l
+                         else Nothing
+    Nothing -> Nothing
+  where
+    thing = decode (BS.pack x) :: Maybe (Map.Map Text.Text ActionMeta)
+  
 actionify :: [String] -> [Action]
 actionify [] = []
 actionify (x:xs) =
   case action of
-    "create" -> let (payload:ys) = xs
-                in CreateAction meta (BS.pack payload) : actionify ys
-    "index" -> let (payload:ys) = xs
-               in IndexAction meta (BS.pack payload) : actionify ys
-    "update" -> let (payload:ys) = xs
-                in UpdateAction meta (BS.pack payload) : actionify ys
-    "delete" -> (DeleteAction meta) : (actionify xs)
-  where (Just actionM) =
-          decode (BS.pack x) :: Maybe (Map.Map Text.Text ActionMeta)
-        ((action,meta):_) = Map.toList actionM
+    (Just ("create", meta)) -> let (payload:ys) = xs
+                               in CreateAction meta (BS.pack payload) : actionify ys
+    (Just ("index", meta)) -> let (payload:ys) = xs
+                              in IndexAction meta (BS.pack payload) : actionify ys
+    (Just ("update", meta)) -> let (payload:ys) = xs
+                               in UpdateAction meta (BS.pack payload) : actionify ys
+    (Just ("delete", meta)) -> (DeleteAction meta) : (actionify xs)
+    otherwise -> actionify xs
+  where action = decodeAction x
 
 bulky :: String -> String
 bulky input = unlines $ map (BS.unpack . toBulk) $ actionify $ lines input
