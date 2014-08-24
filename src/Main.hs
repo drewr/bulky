@@ -5,8 +5,8 @@ module Main where
 import qualified Data.ByteString.Lazy.Char8 as BS
 import qualified Data.Text as Text
 import qualified Data.Map as Map
-import Data.Aeson (Object, ToJSON, encode, decode, (.=),
-                   object, toJSON)
+import qualified Data.HashMap.Strict as M
+import Data.Aeson (Value(..), ToJSON, encode, eitherDecode, decode, (.=), object, toJSON)
 import Data.Aeson.TH (deriveJSON, defaultOptions,
                       fieldLabelModifier, omitNothingFields)
 
@@ -20,11 +20,8 @@ data Action = IndexAction ActionMeta Payload
             | InvalidAction String
             deriving (Show)
 
-data ActionMeta = ActionMeta { _index :: Maybe Text.Text
-                             , _type :: Maybe Text.Text
-                             , _id :: Maybe Text.Text
-                             }
-                deriving (Show)
+data ActionMeta = Map Text.Text Value
+                  deriving (Show)
 
 data ActionL = ActionL Text.Text ActionMeta
 
