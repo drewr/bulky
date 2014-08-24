@@ -20,7 +20,7 @@ data Action = IndexAction ActionMeta Payload
             | InvalidAction String
             deriving (Show)
 
-data ActionMeta = Map Text.Text Value
+data ActionMeta = ActionMeta (Map.Map Text.Text Value)
                   deriving (Show)
 
 data ActionL = ActionL Text.Text ActionMeta
