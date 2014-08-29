@@ -1,21 +1,17 @@
 # bulky
 
-TODO: Write description here
+ES bulk stream editor that doesn't edit (yet!)
 
 ## Installation
 
-TODO: Write installation instructions here
+% `cabal build`
 
 ## Usage
 
-TODO: Write usage instructions here
+% gzip -cd foo.bulk.gz | dist/build/bulky/bulky >foo2.bulk.gz
 
 ## How to run tests
 
 ```
 cabal configure --enable-tests && cabal build && cabal test
 ```
-
-## Contributing
-
-TODO: Write contribution instructions here
