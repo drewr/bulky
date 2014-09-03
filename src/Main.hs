@@ -6,6 +6,7 @@ import qualified Data.ByteString.Lazy.Char8 as BS
 import qualified Data.Text as Text
 import qualified Data.Map as Map
 import qualified Data.HashMap.Strict as M
+import Text.Printf (printf)
 import Data.Aeson (Value(..), ToJSON, encode, eitherDecode, decode, (.=), object, toJSON)
 import Data.Aeson.TH (deriveJSON, defaultOptions,
                       fieldLabelModifier, omitNothingFields)
@@ -47,38 +48,41 @@ instance ToBulk Action where
     BS.concat [(encode $ ActionL "update" meta), BS.pack "\n", payload]
   toBulk (DeleteAction meta) =
     encode $ ActionL "delete" meta
+  toBulk (InvalidAction msg) =
+    BS.pack (printf "ERROR (eitherDecode): %s" msg)
 
-decodeAction :: String -> Maybe (ActionName, ActionMeta)
+decodeAction :: String -> Either String (ActionName, ActionMeta)
 decodeAction x = 
   case thing of
-    (Just actionM) -> let l = Map.toList actionM
-                      in if length l > 0
-                         then Just $ head l
-                         else Nothing
-    Nothing -> Nothing
+    (Right actionM) -> let l = Map.toList actionM
+                       in if length l > 0
+                          then Right $ head l
+                          else Left "no valid bulk action in json"
+    (Left msg) -> (Left msg)
   where
-    thing = decode (BS.pack x) :: Maybe (Map.Map Text.Text ActionMeta)
+    thing = eitherDecode (BS.pack x) :: Either String (Map.Map ActionName ActionMeta)
   
 actionify :: [String] -> [Action]
 actionify [] = []
 actionify (x:xs) =
   case action of
-    (Just ("create", meta)) -> let (payload:ys) = xs
+    (Right ("create", meta)) -> let (payload:ys) = xs
                                in CreateAction meta (BS.pack payload) : actionify ys
-    (Just ("index", meta)) -> let (payload:ys) = xs
+    (Right ("index", meta)) -> let (payload:ys) = xs
                               in IndexAction meta (BS.pack payload) : actionify ys
-    (Just ("update", meta)) -> let (payload:ys) = xs
+    (Right ("update", meta)) -> let (payload:ys) = xs
                                in UpdateAction meta (BS.pack payload) : actionify ys
-    (Just ("delete", meta)) -> (DeleteAction meta) : (actionify xs)
+    (Right ("delete", meta)) -> (DeleteAction meta) : (actionify xs)
+    (Left msg) -> (InvalidAction msg) : actionify xs
     otherwise -> actionify xs
   where action = decodeAction x
 
 bulky :: String -> String
-bulky input = unlines
-            . map (BS.unpack . toBulk)
-            . actionify
-            . filter ((> 0) . length)
-            . lines
+bulky input = unlines 
+            . map (BS.unpack . toBulk) 
+            . actionify  
+            . filter ((> 0) . length) 
+            . lines 
             $ input
 
 main :: IO ()
