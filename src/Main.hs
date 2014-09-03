@@ -74,7 +74,12 @@ actionify (x:xs) =
   where action = decodeAction x
 
 bulky :: String -> String
-bulky input = unlines $ map (BS.unpack . toBulk) $ actionify $ lines input
+bulky input = unlines
+            . map (BS.unpack . toBulk)
+            . actionify
+            . filter ((> 0) . length)
+            . lines
+            $ input
 
 main :: IO ()
 main = interact bulky
