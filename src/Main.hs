@@ -52,7 +52,7 @@ instance ToBulk Action where
     BS.pack (printf "ERROR (eitherDecode): %s" msg)
 
 decodeAction :: String -> Either String (ActionName, ActionMeta)
-decodeAction x = 
+decodeAction x =
   case thing of
     (Right actionM) -> let l = Map.toList actionM
                        in if length l > 0
@@ -61,7 +61,7 @@ decodeAction x =
     (Left msg) -> (Left msg)
   where
     thing = eitherDecode (BS.pack x) :: Either String (Map.Map ActionName ActionMeta)
-  
+
 actionify :: [String] -> [Action]
 actionify [] = []
 actionify (x:xs) =
@@ -78,11 +78,11 @@ actionify (x:xs) =
   where action = decodeAction x
 
 bulky :: String -> String
-bulky input = unlines 
-            . map (BS.unpack . toBulk) 
-            . actionify  
-            . filter ((> 0) . length) 
-            . lines 
+bulky input = unlines
+            . map (BS.unpack . toBulk)
+            . actionify
+            . filter ((> 0) . length)
+            . lines
             $ input
 
 main :: IO ()
